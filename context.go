@@ -13,7 +13,7 @@ type key int
 const requestContextKey key = iota
 
 // newContext returns a new Context with specific api gateway proxy values.
-func newContext(ctx context.Context, e events.APIGatewayProxyRequest) context.Context {
+func newContext(ctx context.Context, e events.LambdaFunctionURLRequest) context.Context {
 	return context.WithValue(ctx, requestContextKey, e.RequestContext)
 }
 

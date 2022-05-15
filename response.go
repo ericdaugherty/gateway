@@ -13,7 +13,7 @@ import (
 // ResponseWriter implements the http.ResponseWriter interface
 // in order to support the API Gateway Lambda HTTP "protocol".
 type ResponseWriter struct {
-	out           events.APIGatewayProxyResponse
+	out           events.LambdaFunctionURLResponse
 	buf           bytes.Buffer
 	header        http.Header
 	wroteHeader   bool
@@ -58,18 +58,16 @@ func (w *ResponseWriter) WriteHeader(status int) {
 	w.out.StatusCode = status
 
 	h := make(map[string]string)
-	mvh := make(map[string][]string)
 
 	for k, v := range w.Header() {
 		if len(v) == 1 {
 			h[k] = v[0]
 		} else if len(v) > 1 {
-			mvh[k] = v
+			h[k] = strings.Join(v, ",")
 		}
 	}
 
 	w.out.Headers = h
-	w.out.MultiValueHeaders = mvh
 	w.wroteHeader = true
 }
 
@@ -79,7 +77,7 @@ func (w *ResponseWriter) CloseNotify() <-chan bool {
 }
 
 // End the request.
-func (w *ResponseWriter) End() events.APIGatewayProxyResponse {
+func (w *ResponseWriter) End() events.LambdaFunctionURLResponse {
 	w.out.IsBase64Encoded = isBinary(w.header)
 
 	if w.out.IsBase64Encoded {
@@ -118,7 +116,7 @@ func isTextMime(kind string) bool {
 	}
 
 	switch mt {
-	case "image/svg+xml", "application/json", "application/xml","application/javascript":
+	case "image/svg+xml", "application/json", "application/xml", "application/javascript":
 		return true
 	default:
 		return false

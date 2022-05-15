@@ -10,57 +10,49 @@ import (
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/pkg/errors"
 )
 
 // NewRequest returns a new http.Request from the given Lambda event.
-func NewRequest(ctx context.Context, e events.APIGatewayProxyRequest) (*http.Request, error) {
+func NewRequest(ctx context.Context, e events.LambdaFunctionURLRequest) (*http.Request, error) {
+
+	rCtx := e.RequestContext
+
 	// path
-	u, err := url.Parse(e.Path)
+	urlString := e.RawPath
+	if len(e.RawQueryString) > 0 {
+		urlString += fmt.Sprintf("?%s", e.RawQueryString)
+	}
+
+	u, err := url.Parse(urlString)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing path")
+		return nil, fmt.Errorf("parse path and query into url: %w", err)
 	}
-
-	// querystring
-	q := u.Query()
-	for k, v := range e.QueryStringParameters {
-		q.Set(k, v)
-	}
-
-	for k, values := range e.MultiValueQueryStringParameters {
-		q[k] = values
-	}
-	u.RawQuery = q.Encode()
 
 	// base64 encoded body
 	body := e.Body
 	if e.IsBase64Encoded {
 		b, err := base64.StdEncoding.DecodeString(body)
 		if err != nil {
-			return nil, errors.Wrap(err, "decoding base64 body")
+			return nil, fmt.Errorf("decoding base64 body: %w", err)
 		}
 		body = string(b)
 	}
 
 	// new request
-	req, err := http.NewRequest(e.HTTPMethod, u.String(), strings.NewReader(body))
+	req, err := http.NewRequest(rCtx.HTTP.Method, u.String(), strings.NewReader((body)))
 	if err != nil {
-		return nil, errors.Wrap(err, "creating request")
+		return nil, fmt.Errorf("creating request: %w", err)
 	}
 
 	// manually set RequestURI because NewRequest is for clients and req.RequestURI is for servers
 	req.RequestURI = u.RequestURI()
 
 	// remote addr
-	req.RemoteAddr = e.RequestContext.Identity.SourceIP
+	req.RemoteAddr = rCtx.HTTP.SourceIP
 
 	// header fields
 	for k, v := range e.Headers {
 		req.Header.Set(k, v)
-	}
-
-	for k, values := range e.MultiValueHeaders {
-		req.Header[k] = values
 	}
 
 	// content-length
@@ -69,8 +61,7 @@ func NewRequest(ctx context.Context, e events.APIGatewayProxyRequest) (*http.Req
 	}
 
 	// custom fields
-	req.Header.Set("X-Request-Id", e.RequestContext.RequestID)
-	req.Header.Set("X-Stage", e.RequestContext.Stage)
+	req.Header.Set("X-Request-Id", rCtx.RequestID)
 
 	// custom context values
 	req = req.WithContext(newContext(ctx, e))
