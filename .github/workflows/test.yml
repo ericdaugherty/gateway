@@ -15,9 +15,5 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v1
 
-    - name: Test v1
+    - name: Test
       run: go test -v -cover ./...
-
-    - name: Test v2
-      run: go test -v -cover ./...
-      working-directory: v2
