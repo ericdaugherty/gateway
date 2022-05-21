@@ -195,3 +195,43 @@ func TestNewRequest_context(t *testing.T) {
 	v := r.Context().Value("key")
 	assert.Equal(t, "value", v)
 }
+
+func TestNewRequest_urlParsing(t *testing.T) {
+	e := events.LambdaFunctionURLRequest{
+		Version:        "2.0",
+		RawPath:        "/_app/start-62705d55.js",
+		RawQueryString: "",
+		Cookies:        []string{},
+		Headers: map[string]string{
+			"accept":            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+			"accept-encoding":   "gzip, deflate, br",
+			"host":              "abc123.lambda-url.us-east-1.on.aws",
+			"x-forwarded-port":  "443",
+			"x-forwarded-proto": "https",
+		},
+		QueryStringParameters: map[string]string{},
+		RequestContext: events.LambdaFunctionURLRequestContext{
+			AccountID:    "anonymous",
+			RequestID:    "74d2f812-5b05-4a24-be67-a416895cb241",
+			Authorizer:   nil,
+			APIID:        "abc123",
+			DomainName:   "abc123.lambda-url.us-east-1.on.aws",
+			DomainPrefix: "abc123",
+			HTTP: events.LambdaFunctionURLRequestContextHTTPDescription{
+				Method:    "GET",
+				Path:      "/_app/start-62705d55.js",
+				Protocol:  "HTTP/1.1",
+				SourceIP:  "1.1.1.1",
+				UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:100.0) Gecko/20100101 Firefox/100.0",
+			},
+		},
+		Body:            "",
+		IsBase64Encoded: false,
+	}
+
+	r, err := NewRequest(context.Background(), e)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "/_app/start-62705d55.js", r.RequestURI)
+	assert.Equal(t, "https://abc123.lambda-url.us-east-1.on.aws/_app/start-62705d55.js", r.URL.String())
+}

@@ -72,6 +72,7 @@ func NewRequest(ctx context.Context, e events.LambdaFunctionURLRequest) (*http.R
 	}
 
 	// host
+	req.URL.Scheme = req.Header.Get("x-forwarded-proto")
 	req.URL.Host = req.Header.Get("Host")
 	req.Host = req.URL.Host
 
